@@ -1,0 +1,9 @@
+{
+  "name": "site-magicopizza",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site vitrine Il Magico — pizzeria",
+  "scripts": {
+    "start": "node serve-local.js"
+  }
+}
