@@ -1,0 +1,16 @@
+# Site statique : HTML/CSS à la racine du dépôt, aucune étape de build requise.
+[build]
+  publish = "."
+
+# En-têtes utiles pour une page vitrine
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
