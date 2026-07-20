@@ -143,7 +143,57 @@
         .status-badge--open{color:#16a34a;border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.05)}
         .status-badge--closed .status-badge__dot{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.4)}
         .status-badge--closed{color:#dc2626;border-color:rgba(239,68,68,0.15);background:rgba(239,68,68,0.04)}
+        .status-badge--holiday .status-badge__dot{background:var(--gold);box-shadow:0 0 8px rgba(212,168,67,0.5)}
+        .status-badge--holiday{color:#8a6a1f;border-color:rgba(212,168,67,0.3);background:rgba(212,168,67,0.09)}
         @keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.7)}}
+
+        /* ===== BANDEAU CONGÉS ANNUELS ===== */
+        .holiday-bar{
+            display:none;position:relative;overflow:hidden;
+            background:var(--red);color:var(--white);
+            border-bottom:2px solid var(--gold);
+            max-height:120px;
+            transition:max-height 0.5s cubic-bezier(0.165,0.84,0.44,1),border-width 0.5s;
+        }
+        .holiday-bar.is-visible{display:block}
+        .holiday-bar__inner{
+            max-width:1200px;margin:0 auto;
+            padding:11px 46px 11px 24px;
+            display:flex;align-items:center;justify-content:center;gap:10px;
+            text-align:center;
+        }
+        .holiday-bar__ico{flex-shrink:0;opacity:0.9}
+        .holiday-bar__text{
+            font-size:0.86rem;line-height:1.45;letter-spacing:0.01em;
+        }
+        .holiday-bar__text strong{font-weight:900}
+        .holiday-bar__text em{
+            font-family:'Instrument Serif',serif;font-style:italic;
+            font-size:1.05em;color:var(--gold);font-weight:400;
+        }
+        .holiday-bar__close{
+            position:absolute;top:50%;right:14px;transform:translateY(-50%);
+            width:26px;height:26px;border:0;border-radius:50%;
+            background:rgba(255,255,255,0.12);color:var(--white);
+            cursor:pointer;line-height:1;font-size:15px;
+            display:flex;align-items:center;justify-content:center;
+            transition:background 0.25s;
+        }
+        .holiday-bar__close:hover{background:rgba(255,255,255,0.25)}
+        @media(max-width:640px){
+            .holiday-bar__inner{padding:10px 40px 10px 16px;gap:8px}
+            .holiday-bar__text{font-size:0.76rem}
+            .holiday-bar__ico{display:none}
+        }
+        /* Le bandeau se replie avec le damier au scroll */
+        .nav.scrolled .holiday-bar{max-height:0;border-bottom-width:0}
+        .footer__holiday{
+            margin-top:12px;padding:10px 12px;
+            border-left:2px solid var(--gold);
+            background:rgba(212,168,67,0.08);
+            font-size:0.82rem;line-height:1.5;color:rgba(255,255,255,0.75);
+        }
+        .footer__holiday strong{color:var(--gold);font-weight:700}
 
         /* HERO */
         .hero{
@@ -382,6 +432,16 @@
 
 <!-- NAV -->
 <nav class="nav" id="nav">
+    <!-- BANDEAU CONGÉS (affiché/masqué automatiquement selon les dates, cf. HOLIDAY dans le script) -->
+    <div class="holiday-bar" id="holidayBar" role="status">
+        <div class="holiday-bar__inner">
+            <svg class="holiday-bar__ico" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+            <p class="holiday-bar__text">
+                <em>Il Magico prend des vacances&nbsp;!</em> Le restaurant est fermé du <strong>20 juillet au 11 août inclus</strong> — réouverture le <strong>12 août à 18h</strong>. À très vite&nbsp;!
+            </p>
+        </div>
+        <button class="holiday-bar__close" id="holidayBarClose" type="button" aria-label="Fermer l'annonce">&times;</button>
+    </div>
     <div class="nav__top-checker">
         <div class="achecker achecker--md" style="height:6px;--sz:6px">
             <div class="achecker__track" id="navCheckerTrack"></div>
@@ -592,6 +652,9 @@
                     <div><span class="day">Samedi</span> 12h–15h · 18h–00h</div>
                     <div><span class="day">Dimanche</span> 13h–16h · 18h–22h</div>
                 </div>
+                <div class="footer__holiday" id="footerHoliday" style="display:none">
+                    <strong>Congés annuels</strong><br>Fermé du 20 juillet au 11 août inclus. Réouverture le 12 août à 18h.
+                </div>
             </div>
             <div>
                 <h3 class="footer__heading">Contact</h3>
@@ -728,11 +791,52 @@
         requestAnimationFrame(update);
     }
 
+    // === CONGÉS ANNUELS ===
+    // Pour modifier ou reconduire : ajuster start/end ci-dessous et le texte du
+    // bandeau (#holidayBar) + celui du footer (.footer__holiday).
+    // Le bandeau et le mode "En congés" s'activent et se désactivent tout seuls :
+    // aucune intervention nécessaire après le 12/08 à 18h.
+    const HOLIDAY = {
+        start: new Date('2026-07-20T00:00:00+02:00'), // fermeture, 1er jour
+        end:   new Date('2026-08-12T18:00:00+02:00'), // réouverture
+        label: 'Réouverture le 12 août'
+    };
+    function isHolidayNow() {
+        const now = new Date();
+        return now >= HOLIDAY.start && now < HOLIDAY.end;
+    }
+
+    function updateHolidayBar() {
+        const bar = document.getElementById('holidayBar');
+        if (!bar) return;
+        const dismissed = sessionStorage.getItem('holidayBarDismissed') === '1';
+        bar.classList.toggle('is-visible', isHolidayNow() && !dismissed);
+    }
+    const holidayClose = document.getElementById('holidayBarClose');
+    if (holidayClose) {
+        holidayClose.addEventListener('click', function () {
+            // Masqué pour la session seulement : réapparaît à la prochaine visite.
+            sessionStorage.setItem('holidayBarDismissed', '1');
+            updateHolidayBar();
+        });
+    }
+    updateHolidayBar();
+
+    const footerHoliday = document.getElementById('footerHoliday');
+    if (footerHoliday && isHolidayNow()) footerHoliday.style.display = 'block';
+
     // === STATUS BADGE (Ouvert / Fermé) ===
     function checkOpenStatus() {
         const badge = document.getElementById('statusBadge');
         const text = document.getElementById('statusText');
         if (!badge || !text) return;
+
+        // Pendant les congés, le statut horaire hebdomadaire ne s'applique pas.
+        if (isHolidayNow()) {
+            badge.className = 'status-badge status-badge--holiday';
+            text.textContent = 'En congés · ' + HOLIDAY.label;
+            return;
+        }
 
         const now = new Date();
         // Use Paris timezone
@@ -772,7 +876,10 @@
         }
     }
     checkOpenStatus();
-    setInterval(checkOpenStatus, 60000); // Re-check every minute
+    setInterval(function () {
+        checkOpenStatus();
+        updateHolidayBar(); // le bandeau se retire seul à la réouverture
+    }, 60000); // Re-check every minute
 
 })();
 </script>
